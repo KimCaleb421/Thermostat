@@ -1,6 +1,3 @@
-
- */
-
 // Shift register bit values to display a cycling line segment when the alarm sounds
 const byte ledCharSet[10] = {
  B00000001,
@@ -21,7 +18,7 @@ const byte ledCharSet[10] = {
  #define SLIDER3  A2
  #define LIGHT    A3
  #define TEMP     A4
- #define KNOCK    A5
+ 
  
  #define DATA     4
  #define LED1     5
@@ -59,8 +56,9 @@ const byte ledCharSet[10] = {
 CapacitiveSensor capPadOn92 = CapacitiveSensor(9, 2);   //Use digital pins 2 and 9,
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-int avgLightLevel;
-int timer;
+//int avgLightLevel;
+
+
 void setup()
 {
   Serial.begin(9600);
@@ -71,6 +69,7 @@ void setup()
   pinMode(SLIDER3, INPUT);
   pinMode(LIGHT, INPUT);
   pinMode(TEMP, INPUT);
+  pinMode(A5, INPUT);
 
   //Enable internal pullups
   pinMode(BUTTON1, INPUT_PULLUP);
@@ -97,29 +96,29 @@ void setup()
   avgLightLevel /= 16;
   Serial.print("Avg: ");
   Serial.println(avgLightLevel);*/
-  timer=0;
-
+ 
 }
 
 void loop()
 {
   //Read inputs
+  int sensorValue = analogRead(A5);
   int val1 = analogRead(SLIDER1);
   int val2 = analogRead(SLIDER2);
   int val3 = analogRead(SLIDER3);
  // int lightLevel = analogRead(LIGHT);
-  long temperature = analogRead(TEMP);
-  ++timer;
+ // long temperature = analogRead(TEMP);
+
   //Read the cap sense pad
 //  long capLevel = capPadOn92.capacitiveSensor(30);
-  
+ /* 
   //Do conversion of temp from analog value to digital
   temperature *= 5000; //5V is the same as 1023 from the ADC (12-bit) - example, the ADC returns 153 * 5000 = 765,000
   temperature /= 1023; //It's now in mV - 765,000 / 1023 = 747
   //The TMP36 reports 500mV at 0C so let's subtract off the 500mV offset
   temperature -= 500; //747 - 500 = 247
   //Temp is now in C where 247 = 24.7
-
+/*
   //Display values
   //sprintf is a great way to combine a bunch of variables and strings together into one print statement
   char tempString[200];
@@ -127,18 +126,24 @@ void loop()
   Serial.print(tempString); 
   sprintf(tempString, " Temp: %03d.%01dC", (int)temperature/10, (int)temperature%10);
   Serial.print(tempString); 
-
-//flashes LED alerts when temperature passes a set threshold value
-  if(digitalRead(BUTTON1) == LOW)
+*/
+  delay(500);
+  //convert analog reading to voltage
+  float tempvolt = sensorValue*(5.0/1023.0);
+  //converting voltage to temperature value
+  //float temperature = ((2*tempvolt/5)-.8)/-.21;
+  float temperature= 100*(3.044625*pow(10,-5)*pow(tempvolt,6)-(.005209376*pow(tempvolt,5))+0.065699269*pow(tempvolt,4)-0.340695972*pow(tempvolt,3)+0.897136183*pow(tempvolt,2)-1.419855102*tempvolt+1.451672296);
+  Serial.println(temperature);
+//flashes LED alerts when temperature passes a set threshold value  
+  if(temperature > 27)
   {
     Serial.print(" It's too hot!");
-      if (timer > 250){
-        timer -= 250;
-        int ledPin1 = digitalRead(LED1);
-        int ledPin2 = digitalRead(LED2);
-        digitalWrite(LED1, !ledPin1); //reads the current state of the LEDS and switches them
-        digitalWrite(LED2, !ledPin2);
-      }
+        digitalWrite(LED1, HIGH);
+        digitalWrite(LED2, LOW);
+        delay(100);
+        digitalWrite(LED1, LOW);
+        digitalWrite(LED2, HIGH);
+        delay(100);
   }
   else
     digitalWrite(LED1, LOW);
