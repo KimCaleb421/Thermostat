@@ -40,12 +40,14 @@ const byte ledCharSet[10] = {
 #define LIGHT    A3
 #define TEMP     A4
 
+#define FAN      2
 #define BUZZER   3
 #define DATA     4
 #define LED1     5
 #define LED2     6
 #define LATCH    7
 #define CLOCK    8
+#define HEAT     9
 #define BUTTON1  10
 #define BUTTON2  11
 #define BUTTON3  12
@@ -56,12 +58,12 @@ const byte ledCharSet[10] = {
 CapacitiveSensor capPadOn92 = CapacitiveSensor(9, 2);   //Use digital pins 2 and 9,
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-//int avgLightLevel;
 unsigned long timerled;
-int initcrit;
-boolean led_run1=false;
+int initcrit; //set initial condition for 
+boolean led_run1=false; //controls for leds
 boolean led_run2=true;
 boolean test = true;
+int count=0; //counter for heating safety mechanism
 
 void setup()
 {
@@ -83,6 +85,8 @@ void setup()
   pinMode(BUZZER, OUTPUT);
   pinMode(LED1, OUTPUT);
   pinMode(LED2, OUTPUT);
+  pinMode(HEAT, OUTPUT);
+  pinMode(FAN, OUTPUT);
 
   pinMode(LATCH, OUTPUT);
   pinMode(CLOCK, OUTPUT);
@@ -131,7 +135,7 @@ void loop()
   Serial.print(tempString); 
   sprintf(tempString, " Temp: %03d.%01dC", (int)temperature/10, (int)temperature%10);
   Serial.print(tempString); 
-
+ */
   delay(500);
   //convert analog reading to voltage
   float tempvolt = sensorValue*(5.0/1023.0);
@@ -139,32 +143,45 @@ void loop()
   //float temperature = ((2*tempvolt/5)-.8)/-.21;
   float temperature= 100*(3.044625*pow(10,-5)*pow(tempvolt,6)-(.005209376*pow(tempvolt,5))+0.065699269*pow(tempvolt,4)-0.340695972*pow(tempvolt,3)+0.897136183*pow(tempvolt,2)-1.419855102*tempvolt+1.451672296);
   Serial.println(temperature);
- */
-//flashes LED alerts when temperature passes a set threshold value  
-  
 
-  if(test ==true)
+//flashes LED alerts when temperature passes a set threshold value  
+  if (temperature < 27){
+    digitalWrite(HEAT, HIGH);
+    count++;
+    Serial.print(count);
+    Serial.print(", ");
+    if (count >25){
+      digitalWrite(HEAT, LOW);
+      if (count >50)
+        count = 0;}}
+  else
+    digitalWrite(HEAT, LOW);
+
+  if(temperature > 29) //if reaches too hot threshold temp
   {
-    tone(BUZZER, 262);
+    tone(BUZZER, 262); //alarm turns on
     Serial.print(" It's too hot!");
-    if (initcrit==0){
-      timerled=millis();
+    digitalWrite(FAN, LOW); //turns on fan
+    if (initcrit==0){ //initial case to set up led differences and overall timer (timerled)
+      timerled=millis(); //built-in overall timer for led delays
       initcrit = 1;
-      led_run2 = true;}
-    if (millis()-timerled >= 75UL){
+      led_run2 = true;} //changes led states for alternating lights
+    if (millis()-timerled >= 75UL){  //changes state of leds
       led_run1 = !led_run1;
       digitalWrite(LED1, led_run1);
       led_run2 = !led_run2;
       digitalWrite(LED2, led_run2);
-      timerled=millis();}
-      Serial.print(led_run2);
+      timerled=millis();} //sets up timer for small, led delays
+      //Serial.print(led_run2);
             
   }
- /*   else
-    digitalWrite(LED1, LOW);
+  else{
+    digitalWrite(FAN, HIGH); //turns off the fan
+    digitalWrite(LED1, LOW); //turns off the leds
     digitalWrite(LED2, LOW);
-    noTone(BUZZER);
-*/
+    noTone(BUZZER); //turns off the buzzer
+    initcrit=0;} //resets the initial critical condition
+
  /* Serial.println();
 
   //Set the brightness on LED #2 (D6) based on slider 1
