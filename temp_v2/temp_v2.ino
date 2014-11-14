@@ -37,8 +37,8 @@ const byte ledCharSet[10] = {
 #define SLIDER1  A2 //Matches button 1
 #define SLIDER2  A1 
 #define SLIDER3  A0 //Matches button 3
-#define LEDSCL   A5
-#define LEDSDA   A4
+//#define LEDSCL   A5
+//#define LEDSDA   A4
 
 #define FAN      2
 #define BUZZER   3
@@ -55,8 +55,8 @@ const byte ledCharSet[10] = {
 //This relies on the Capactive Sensor library here: http://playground.arduino.cc/Main/CapacitiveSensor
 #include <CapacitiveSensor.h>
 #include <Wire.h> 
-#include "Adafruit_LEDBackpack.h"
-#include "Adafruit_GFX.h"
+#include "Adafruit_LEDBackpack.h" //library for LED display
+#include "Adafruit_GFX.h" //library for LED display
 
 CapacitiveSensor capPadOn92 = CapacitiveSensor(9, 2);   //Use digital pins 2 and 9,
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -67,15 +67,9 @@ boolean led_run1=false; //controls for leds
 boolean led_run2=true;
 boolean test = true;
 int count=0; //counter for heating safety mechanism
-Adafruit_7segment matrix = Adafruit_7segment();
+Adafruit_7segment matrix = Adafruit_7segment(); //set up for LED display
 void setup()
-{
-  #ifndef __AVR_ATtiny85__
-  Serial.println("7 Segment Backpack Test");
-  #endif
-  matrix.begin(0x70);
-  Serial.begin(9600);
-
+{ 
   //Initialize inputs and outputs
   pinMode(SLIDER1, INPUT);
   pinMode(SLIDER2, INPUT);
@@ -103,6 +97,11 @@ void setup()
   capPadOn92.set_CS_AutocaL_Millis(0xFFFFFFFF); // Turn off autocalibrate on channel 1 - From Capacitive Sensor example sketch
 
   Serial.println("Danger Shield Component Test");  
+  //set up for LED display
+  #ifndef __AVR_ATtiny85__ 
+  Serial.begin(9600);//can adjust temp display time by adjusting serial.begin
+  #endif
+  matrix.begin(0x70);
 
   //Take 16 readings from the light sensor and average them together
  /* avgLightLevel = 0;
@@ -149,49 +148,57 @@ void loop()
   //converting voltage to temperature value
   //float temperature = ((2*tempvolt/5)-.8)/-.21;
   float temperature= 100*(3.044625*pow(10,-5)*pow(tempvolt,6)-(.005209376*pow(tempvolt,5))+0.065699269*pow(tempvolt,4)-0.340695972*pow(tempvolt,3)+0.897136183*pow(tempvolt,2)-1.419855102*tempvolt+1.451672296); //voltage to temp conversion eqn
+  //output measured temp on LED display
   matrix.print(temperature);
   matrix.writeDisplay();
   Serial.println(temperature);
-
+  
+  long buzSound = map(val3, 0, 1020, 200, 1000);//mapping frequency tones to slider 3 location
+  long lowtemp = map(val1, 0, 1020, 23, 30);//mapping lower temperature threshold to slider 1 location
+  long hightemp = map(val2, 0, 1020, 27, 37);//mapping higher tempeature threshold to slider 2 location
+ // Serial.println(lowtemp);
+  //Serial.println(hightemp);
+  if (lowtemp>hightemp){ //addresses possible user error of incorrect temperature threshold settings
+    Serial.print("WARNING: Incorrect temperature settings! Check temperature threshold values!");
+    tone(BUZZER, buzSound);}
+  else{  
 //flashes LED alerts when temperature passes a set threshold value  
-  if (temperature < 27){ //if temp is too low
-    digitalWrite(HEAT, HIGH); //heater turns on
-    count++; //safety counter starts
+    if (temperature < lowtemp){ //if temp is too low
+      digitalWrite(HEAT, HIGH);} //heater turns on - UNCOMMENT LATER!!!
+    /*count++; //safety counter starts
     Serial.print(count);
     Serial.print(", ");
     if (count >25){ //if the heater is on for x amount of time
       digitalWrite(HEAT, LOW); //heater automatically turns off after the x amount of time
       if (count >50) //resets the counter after a certain amount of time
-        count = 0;}}
-  else
-    digitalWrite(HEAT, LOW);
+        count = 0;}}*/
+    else
+      digitalWrite(HEAT, LOW);
 
-  if(temperature > 29) //if reaches too hot threshold temp
-  {
-    tone(BUZZER, 262); //alarm turns on
-    Serial.print(" It's too hot!");
-    digitalWrite(FAN, HIGH); //turns on fan
-    if (initcrit==0){ //initial case to set up led differences and overall timer (timerled)
-      timerled=millis(); //built-in overall timer for led delays
-      initcrit = 1;
-      led_run2 = true;} //changes led states for alternating lights
-    if (millis()-timerled >= 75UL){  //changes state of leds
-      led_run1 = !led_run1;
-      digitalWrite(LED1, led_run1);
-      led_run2 = !led_run2;
-      digitalWrite(LED2, led_run2);
-      timerled=millis();} //sets up timer for small, led delays
-      //Serial.print(led_run2);
-            
+    if(temperature > hightemp){ //if reaches too hot threshold temp
+      tone(BUZZER, buzSound); //alarm turns on
+      Serial.print(" It's too hot!");
+      digitalWrite(FAN, HIGH); //turns on fan
+      if (initcrit==0){ //initial case to set up led differences and overall timer (timerled)
+        timerled=millis(); //built-in overall timer for led delays
+        initcrit = 1;
+        led_run2 = true;} //changes led states for alternating lights
+      if (millis()-timerled >= 75UL){  //changes state of leds
+        led_run1 = !led_run1;
+        digitalWrite(LED1, led_run1);
+        led_run2 = !led_run2;
+        digitalWrite(LED2, led_run2);
+        timerled=millis();} //sets up timer for small, led delays
+        //Serial.print(led_run2);       
+    }
+    else{
+      digitalWrite(FAN, LOW); //turns off the fan
+      digitalWrite(LED1, LOW); //turns off the leds
+      digitalWrite(LED2, LOW);
+      noTone(BUZZER); //turns off the buzzer
+      initcrit=0;} //resets the initial critical condition
   }
-  else{
-    digitalWrite(FAN, LOW); //turns off the fan
-    digitalWrite(LED1, LOW); //turns off the leds
-    digitalWrite(LED2, LOW);
-    noTone(BUZZER); //turns off the buzzer
-    initcrit=0;} //resets the initial critical condition
-
- /* Serial.println();
+/* Serial.println();
 
   //Set the brightness on LED #2 (D6) based on slider 1
   int ledLevel = map(val1, 0, 1020, 0, 255); //Map the slider level to a value we can set on the LED
