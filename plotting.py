@@ -13,7 +13,7 @@ serPort = '/dev/ttyACM0'
 
 # open the file for writing
 filename = time.strftime("%m\%d_%H:%M:%S")
-dataFile = open("./%s.csv" % filename, "w");
+dataFile = open("./Data/%s.csv" % filename, "w");
 
 
 print "\n********************************************************"
