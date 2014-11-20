@@ -23,7 +23,8 @@ int initcrit; //set initial condition for critical temperature
 boolean led_run1=false; //controls for warning leds
 boolean led_run2=true;
 int count=0; //counter for heating safety mechanism
-int comments=0;
+int comment=0;
+int comment2=0;
 Adafruit_7segment matrix = Adafruit_7segment(); //set up for LED display
 
 void setup()
@@ -40,7 +41,7 @@ void setup()
   pinMode(HEAT, OUTPUT);
   pinMode(FAN, OUTPUT);
 
-  //set up for LED display
+  //Set up for LED display
   #ifndef __AVR_ATtiny85__ 
   Serial.begin(9600);//can adjust temp display time by adjusting serial.begin
   #endif
@@ -73,22 +74,21 @@ void loop()
   matrix.writeDisplay();
   
 
-  Serial.print(lowtemp); Serial.print(", ");
-  Serial.print(hightemp); Serial.print(", ");
-  
-  
+   
   //======================ADDRESSING USER ERROR CASES=====================
   if (lowtemp>hightemp){ //addresses possible user error of incorrect temperature threshold settings
-    Serial.print(temperature);Serial.print(", ");
-    Serial.println("WARNING: Incorrect temperature settings! Check temperature threshold values!");
+    //Serial.print(temperature);Serial.print(", ");
+    //Serial.println("WARNING: Incorrect temperature settings! Check temperature threshold values!");
+    comment = 1;
     tone(BUZZER, buzSound); delay(100);
     noTone(BUZZER); delay(30);
     tone(BUZZER, buzSound); delay(100);
     noTone(BUZZER); delay(100);
     }
   else if (temperature < 10 || temperature > 45){ //addresses temperature probe being out of range. Most likely the sensor is unpluged
-    Serial.print(temperature);Serial.print(", ");
-    Serial.println("WARNING: Sensor out of range - check wiring!");
+    comment = 2;
+    //Serial.print(temperature);Serial.print(", ");
+    //Serial.println("WARNING: Sensor out of range - check wiring!");
     tone(BUZZER, buzSound);
     delay(100);
     noTone(BUZZER);
@@ -96,15 +96,16 @@ void loop()
     }
 
    //=============================HEATER CONTROL=============================
-  else{  
+  else{
+    comment = 0; //no comment  
    // if (temperature > lowtemp && temperature < hightemp){   //I don't think we need these two lines
    // Serial.println(temperature); }
     if (temperature < lowtemp){    //Baby's temperature is too low
-      Serial.println(temperature); 
-      digitalWrite(HEAT, HIGH);}   //heater turns on
-    count++; //safety counter increments
-    Serial.print(count);                    //THIS NEEDS TO GO SOMEWHERE ELSE
-    Serial.print(", ");
+      //Serial.println(temperature); 
+      digitalWrite(HEAT, HIGH);   //heater turns on
+    count++;} //safety counter increments
+    //Serial.print(count);                    //THIS NEEDS TO GO SOMEWHERE ELSE
+    //Serial.print(", ");
     if (count >25){            //if the heater is on for x amount of time
       digitalWrite(HEAT, LOW); //heater automatically turns off after the x amount of time
       if (count >50)           //resets the counter after a certain amount of time
@@ -117,7 +118,8 @@ void loop()
    //======================CRITICAL TEMPERATURE REACHED======================
     if(temperature > hightemp){ //if reaches too hot threshold temp
       tone(BUZZER, buzSound);   //alarm turns on
-      Serial.print(temperature); Serial.print(", "); Serial.println("It's too hot!");
+      comment2 = 1;
+      //Serial.print(temperature); Serial.print(", "); Serial.println("It's too hot!");
       digitalWrite(FAN, HIGH);  //turns on fan
       if (initcrit==0){    //initial case to set up alternating led and timer (timerled)
         timerled=millis(); //built-in overall timer for led delays
@@ -136,6 +138,20 @@ void loop()
       digitalWrite(LED1, LOW); //turns off the leds
       digitalWrite(LED2, LOW);
       noTone(BUZZER); //turns off the buzzer
-      initcrit=0;}    //resets the initial critical condition
+      initcrit = 0;     //resets the initial critical condition
+      comment2 = 0;} 
+
+  Serial.print(temperature); Serial.print(", ");
+  Serial.print(lowtemp); Serial.print(", ");
+  Serial.print(hightemp); Serial.print(", ");
+  Serial.print(count); Serial.print(", ");
+  if(comment == 1)
+    Serial.println("WARNING: Incorrect temperature settings! Check temperature threshold values!");
+  else if(comment == 2)
+    Serial.println("WARNING: Sensor out of range - check wiring!");
+  else if(comment2 == 1)
+    Serial.println("It's too hot!");
+  else
+    Serial.println();
 
 }
