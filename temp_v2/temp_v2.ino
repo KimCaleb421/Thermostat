@@ -18,7 +18,9 @@
 #include "Adafruit_GFX.h" //library for LED display
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-unsigned long timerled; //controls led delay times
+unsigned long timerled;  //controls led delay times
+unsigned long start_time; 
+unsigned long elapsed_time; //creates time stamp for data recording
 int initcrit; //set initial condition for critical temperature
 boolean led_run1=false; //controls for warning leds
 boolean led_run2=true;
@@ -47,14 +49,18 @@ void setup()
   #endif
   matrix.begin(0x70);
 
- initcrit = 0; //The critical condition is not initialized
+  initcrit = 0; //The critical condition is not initialized
+  start_time = millis(); //initializes the timer
+  //Serial.print("Time"); Serial.print(", "); Serial.print("Temperature"); Serial.print(", "); Serial.print("Baby T Threshold"); Serial.print(", "); //Headers
+  //Serial.print("T Crit"); Serial.print(", "); Serial.print("Bang-Bang Counter"); Serial.print(", "); Serial.println("Comments");
 }
 
 void loop()
 {
   delay(500); //Sets the timing on the void loop
+  elapsed_time = (millis() - start_time)/1000;
 
-  //Read inputs
+  //=============================READ INPUTS============================
   int sensorValue = analogRead(A3); //thermistor
   int val1 = analogRead(SLIDER1);
   int val2 = analogRead(SLIDER2);
@@ -62,23 +68,15 @@ void loop()
   long buzSound = map(val3, 0, 1020, 1000, 200); //mapping frequency tones to slider 3 location
   long lowtemp = map(val1, 0, 1020, 30, 23);     //mapping lower temperature threshold to slider 1 location
   long hightemp = map(val2, 0, 1020, 37, 27);    //mapping higher tempeature threshold to slider 2 location
-  
-  
-  //convert analog reading to voltage
-  float tempvolt = sensorValue*(5.0/1023.0);
+    
+  float tempvolt = sensorValue*(5.0/1023.0);  //convert analog reading to voltage
   //converting voltage to temperature value
   float temperature= 100*(3.044625*pow(10,-5)*pow(tempvolt,6)-(.005209376*pow(tempvolt,5))+0.065699269*pow(tempvolt,4)-0.340695972*pow(tempvolt,3)+0.897136183*pow(tempvolt,2)-1.419855102*tempvolt+1.451672296); //voltage to temp conversion eqn
-  
-  //matrix.print(Math.round((temperature*10)/10));
-  matrix.print(temperature);   //output measured temp on LED display
-  matrix.writeDisplay();
-  
 
+    
    
   //======================ADDRESSING USER ERROR CASES=====================
   if (lowtemp>hightemp){ //addresses possible user error of incorrect temperature threshold settings
-    //Serial.print(temperature);Serial.print(", ");
-    //Serial.println("WARNING: Incorrect temperature settings! Check temperature threshold values!");
     comment = 1;
     tone(BUZZER, buzSound); delay(100);
     noTone(BUZZER); delay(30);
@@ -87,8 +85,6 @@ void loop()
     }
   else if (temperature < 10 || temperature > 45){ //addresses temperature probe being out of range. Most likely the sensor is unpluged
     comment = 2;
-    //Serial.print(temperature);Serial.print(", ");
-    //Serial.println("WARNING: Sensor out of range - check wiring!");
     tone(BUZZER, buzSound);
     delay(100);
     noTone(BUZZER);
@@ -98,29 +94,25 @@ void loop()
    //=============================HEATER CONTROL=============================
   else{
     comment = 0; //no comment  
-   // if (temperature > lowtemp && temperature < hightemp){   //I don't think we need these two lines
-   // Serial.println(temperature); }
     if (temperature < lowtemp){    //Baby's temperature is too low
       //Serial.println(temperature); 
       digitalWrite(HEAT, HIGH);   //heater turns on
-    count++;} //safety counter increments
-    //Serial.print(count);                    //THIS NEEDS TO GO SOMEWHERE ELSE
-    //Serial.print(", ");
-    if (count >25){            //if the heater is on for x amount of time
+      count++;} //safety counter increments
+    else                  //Baby's temperature is just right
+      digitalWrite(HEAT, LOW);
+      
+    if (count >25){            //Bang-bang control: if the heater is on for x amount of time
       digitalWrite(HEAT, LOW); //heater automatically turns off after the x amount of time
       if (count >50)           //resets the counter after a certain amount of time
         count = 0;}
-    else                  //Baby's temperature is just right
-      digitalWrite(HEAT, LOW);
   }
 
 
    //======================CRITICAL TEMPERATURE REACHED======================
     if(temperature > hightemp){ //if reaches too hot threshold temp
       tone(BUZZER, buzSound);   //alarm turns on
-      comment2 = 1;
-      //Serial.print(temperature); Serial.print(", "); Serial.println("It's too hot!");
       digitalWrite(FAN, HIGH);  //turns on fan
+      comment2 = 1;
       if (initcrit==0){    //initial case to set up alternating led and timer (timerled)
         timerled=millis(); //built-in overall timer for led delays
         initcrit = 1;      //escapes the initial case from now on
@@ -141,6 +133,14 @@ void loop()
       initcrit = 0;     //resets the initial critical condition
       comment2 = 0;} 
 
+
+   //=============================PRINT OUTS============================
+    
+  //matrix.print(Math.round((temperature*10)/10));
+  matrix.print(temperature);   //output measured temp on LED display
+  matrix.writeDisplay();
+  
+  Serial.print(elapsed_time); Serial.print(", ");  
   Serial.print(temperature); Serial.print(", ");
   Serial.print(lowtemp); Serial.print(", ");
   Serial.print(hightemp); Serial.print(", ");
