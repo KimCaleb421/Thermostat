@@ -13,7 +13,6 @@
 #define HEAT     9
 
 #include <Wire.h> 
-//#include <math.h>
 #include "Adafruit_LEDBackpack.h" //library for LED display
 #include "Adafruit_GFX.h" //library for LED display
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -24,9 +23,11 @@ unsigned long elapsed_time; //creates time stamp for data recording
 int initcrit; //set initial condition for critical temperature
 boolean led_run1=false; //controls for warning leds
 boolean led_run2=true;
-int count=0; //counter for heating safety mechanism
-int comment=0;
+boolean heat_flag=false; //flag if the heater is on
+int comment=0;  //flags for possible comments/warnings
 int comment2=0;
+int count=0; //counter for heating safety mechanism
+
 Adafruit_7segment matrix = Adafruit_7segment(); //set up for LED display
 
 void setup()
@@ -60,6 +61,7 @@ void loop()
   delay(500); //Sets the timing on the void loop
   elapsed_time = (millis() - start_time)/1000;
 
+
   //=============================READ INPUTS============================
   int sensorValue = analogRead(A3); //thermistor
   int val1 = analogRead(SLIDER1);
@@ -90,21 +92,24 @@ void loop()
     noTone(BUZZER);
     delayMicroseconds(50);
     }
+    
 
    //=============================HEATER CONTROL=============================
   else{
     comment = 0; //no comment  
     if (temperature < lowtemp){    //Baby's temperature is too low
-      //Serial.println(temperature); 
       digitalWrite(HEAT, HIGH);   //heater turns on
-      count++;} //safety counter increments
-    else                  //Baby's temperature is just right
+      heat_flag = true;
+      count++; //safety counter increments
+       if (count >25){            //Bang-bang control: if the heater is on for x amount of time
+         digitalWrite(HEAT, LOW); //heater automatically turns off after the x amount of time
+         heat_flag = !heat_flag;
+         if (count >50)           //resets the counter after a certain amount of time
+           count = 0;}}
+    else{                  //Baby's temperature is just right
       digitalWrite(HEAT, LOW);
+      heat_flag = false;}
       
-    if (count >25){            //Bang-bang control: if the heater is on for x amount of time
-      digitalWrite(HEAT, LOW); //heater automatically turns off after the x amount of time
-      if (count >50)           //resets the counter after a certain amount of time
-        count = 0;}
   }
 
 
@@ -135,9 +140,10 @@ void loop()
 
 
    //=============================PRINT OUTS============================
-    
-  //matrix.print(Math.round((temperature*10)/10));
-  matrix.print(temperature);   //output measured temp on LED display
+  //Print to 7-segment Display
+  matrix.writeDigitNum(1,floor(temperature/10)); //Tens digit
+  matrix.writeDigitNum(3,(int) floor(temperature) % 10,true); //Ones digit, decimal is true
+  matrix.writeDigitNum(4,round(temperature*10) % 10);  //Tenths digit (rounded)
   matrix.writeDisplay();
   
   Serial.print(elapsed_time); Serial.print(", ");  
@@ -145,6 +151,7 @@ void loop()
   Serial.print(lowtemp); Serial.print(", ");
   Serial.print(hightemp); Serial.print(", ");
   Serial.print(count); Serial.print(", ");
+  Serial.print(heat_flag);
   if(comment == 1)
     Serial.println("WARNING: Incorrect temperature settings! Check temperature threshold values!");
   else if(comment == 2)
