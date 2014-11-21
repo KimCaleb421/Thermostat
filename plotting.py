@@ -1,7 +1,7 @@
 # plotting.py
 # Tim Kerins 21-04-14
 # A very simple datalogger script that parses data from the serial port and
-# saves it in the file loggedData.dat
+# saves it as <time_stamp>.csv
 
 #! /usr/bin/env python
 
@@ -12,7 +12,7 @@ from matplotlib import pyplot as plt
 serPort = '/dev/ttyACM0'
 
 # open the file for writing
-filename = time.strftime("%m\%d_%H:%M:%S")
+filename = time.strftime("%m-%d_%H-%M-%S")
 dataFile = open("./Data/%s.csv" % filename, "w");
 
 
@@ -37,10 +37,13 @@ sys.stdout.flush()
 print "Hit return to start logging ..."
 key = sys.stdin.readline()
 start = time.time()
+dataFile.write("Time, Temperature, Baby set T, Crit T, Bang-Bang Counter, Heater, Comments\n") 
 
 # sends signal to start logging
 ser.write('1');
-print "Logging Started. CTRL-C to stop\n"
+print "Logging Started. CTRL-C to stop\n\n"
+print "Time, Temperature, Baby set T, Crit T, Bang-Bang Counter, Heater, Comments\n"
+
 
 #def trunc(f,n):
 #	slen = len('%.*f' % (n,f))
@@ -51,10 +54,10 @@ while True:
 
         # read data from serial writes to stdio and dataFile
         line = ser.readline()
-	elapsed = time.time() - start
-	print str("{:.2f}".format(elapsed)) + ',',
+	#elapsed = time.time() - start
+	#print str("{:.2f}".format(elapsed)) + ',',
 	#print str(','),       
-# print str(datetime.timedelta(seconds=elapsed)),  #trunc(elapsed,2))),
+        # print str(datetime.timedelta(seconds=elapsed)),  #trunc(elapsed,2))),
 	print line;
         dataFile.write(line)
         

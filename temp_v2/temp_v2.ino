@@ -58,7 +58,7 @@ void setup()
 
 void loop()
 {
-  delay(500); //Sets the timing on the void loop
+  delay(1000); //Sets the timing on the void loop
   elapsed_time = (millis() - start_time)/1000;
 
 
@@ -151,7 +151,7 @@ void loop()
   Serial.print(lowtemp); Serial.print(", ");
   Serial.print(hightemp); Serial.print(", ");
   Serial.print(count); Serial.print(", ");
-  Serial.print(heat_flag);
+  Serial.print(heat_flag); Serial.print(", ");
   if(comment == 1)
     Serial.println("WARNING: Incorrect temperature settings! Check temperature threshold values!");
   else if(comment == 2)
