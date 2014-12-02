@@ -1,16 +1,27 @@
+//=============================HOW TO USE============================
+/*
+Below is a code for a thermostat for use in incubators in the developing world. 
+It is intended as an automated, self-regulating system and should require little user system interaction. 
+It consists mainly of a temperature sensor along with a heat source and cooling fan to allow for bang-bang 
+heating control for the environment. Additional features are an alarm system (with buzzer and LEDS), 
+LED display (for easy temperature read-out), and data logging features (exporting the Serial data to a .csv 
+file for easy plotting and analysis in excel). The user is able to control the desired temperature of the 
+incubator, the critical threshold temperature considered too hot for the enclosure, and the alarm frequency 
+using sliders controls. Built-in error cases include notifying the user of incorrect threshold settings, 
+disconnected thermistor or wiring failures, and automatic timed heating shut-off to prevent dangerous overheating.
+*/
+
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 //These pin definitions are for v1.7 of the board
-#define SLIDER1  A2 //Matches button 1
-#define SLIDER2  A1 
-#define SLIDER3  A0 //Matches button 3
-//#define LEDSCL   A5
-//#define LEDSDA   A4
+#define SLIDER1  A2 //Sets ambient temperature value for the incubator
+#define SLIDER2  A1 //Sets high critical temperature value
+#define SLIDER3  A0 //Sets alarm frequency value
 
-#define FAN      2
-#define BUZZER   3
-#define LED1     5
-#define LED2     6
-#define HEAT     9
+#define FAN      2 //Cooling fan
+#define BUZZER   3 //buzzer (from DangerShield)
+#define LED1     5 //alarm LEDs
+#define LED2     6 //
+#define HEAT     9 //Space heater attached via Powerswitch tail relay
 
 #include <Wire.h> 
 #include "Adafruit_LEDBackpack.h" //library for LED display
@@ -78,7 +89,7 @@ void loop()
     
    
   //======================ADDRESSING USER ERROR CASES=====================
-  if (lowtemp>hightemp){ //addresses possible user error of incorrect temperature threshold settings
+  if (lowtemp>hightemp){ //addresses possible user error of incorrect temperature threshold settings  (i.e. the threshold for the upper limit is less than the desired temperature setting)
     comment = 1;
     tone(BUZZER, buzSound); delay(100);
     noTone(BUZZER); delay(30);
