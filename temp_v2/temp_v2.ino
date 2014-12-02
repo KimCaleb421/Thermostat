@@ -1,4 +1,4 @@
-//=============================HOW TO USE============================
+//=============================OVERVIEW============================
 /*
 Below is a code for a thermostat for use in incubators in the developing world. 
 It is intended as an automated, self-regulating system and should require little user system interaction. 
